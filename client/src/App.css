@@ -1,0 +1,75 @@
+.slot-machine {
+    width: 300px;
+    margin: auto;
+    margin-top: 5rem;
+    text-align: center;
+    border:  1px solid #ccc;
+    border-radius: 10px;
+    padding: 20px;
+    background: #f9f9f9;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+  }
+  
+  .reels {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+  }
+  
+  .reel {
+    font-size: 2rem;
+    font-weight: bold;
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+  }
+  
+  .controls {
+    margin-bottom: 20px;
+  }
+  
+  .spin-button {
+    background: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 0 10px;
+    transition: background 0.3s;
+  }
+
+  .cashout-button {
+    border: #eee;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 0 10px;
+  }
+  
+  .spin-button:disabled, .cashout-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  .spin-button:hover:not(:disabled) {
+    background: #0056b3;
+  }
+  
+  .credits {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .message {
+    font-size: 1.1rem;
+    color: #d9534f;
+  }
+  

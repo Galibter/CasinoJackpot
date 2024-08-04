@@ -38,12 +38,19 @@ Before running the application, ensure you have the following installed:
 
   # Thought process, challenges faced
   - How to manage sessions on the server?
+
     Store and manage all sessions and accounts in mysql db
+
   - How to manage user accounts? should create registration and login process?
+    
      Generate and store account id over cookie to identify users to bybass registration and login process during the assignment.
+    
   - How to prevent concurrent session and account updates?
+    
     Add timestamp checks to prevent overlapping updates.
+    
   - Leading principle - Create stateless api to provide scalable solution
+    
     The api is stateless and could run over cluster to provide scalability
 
 Written by May Galibter :)

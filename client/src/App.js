@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import "./App.css"
+import Cookies from 'js-cookie';
+import { v4 as uuidv4 } from 'uuid';
 
 //Slot machine component
 const SlotMachine = () => {
@@ -14,8 +16,16 @@ const SlotMachine = () => {
     useEffect(() => {
       const initializeSession = async () => {
         try {
+          // Store the account ID in a cookie to bypass registration and login processes
+          let accountId = Cookies.get('accountId');
+              
+          if (!accountId) {
+              accountId = uuidv4();
+              Cookies.set('accountId', accountId); 
+          }
+
           //Start new game session on server
-          const response = await axios.post('http://localhost:3001/start-session', { }, { withCredentials: true });
+          const response = await axios.post('http://localhost:3001/start-session', { accountId }, { withCredentials: true });
           const { initialCredits, sessionId } = response.data;
           setCredits(initialCredits);
           setSessionId(sessionId);
@@ -52,9 +62,15 @@ const SlotMachine = () => {
     };
 
     const handleCashout = async () => {
-      if (credits > 0) {
-          setMessage(`Successfully cashed out ${credits} credits.`);
+      if (credits > 0 && sessionId) {
+        try {
+          const response = await axios.post('http://localhost:3001/cashout', { sessionId }, { withCredentials: true });
+          const { cashoutCredits, accountCredits } = response.data;
+          setMessage(`Successfully cashed out ${cashoutCredits} credits.\nYour total account credits: ${accountCredits}`);
           setCredits(0);
+        } catch (error) {
+          console.error('Error cashing out:', error);
+        }
       }
     };
 

@@ -3,6 +3,7 @@ import cors from 'cors';
 import sequelize from './sequelizeConfig';
 import { v4 as uuidv4 } from 'uuid';
 import Session from './models/Session';
+import Account from './models/Account';
 
 const app = express();
 const port = 3001; 
@@ -43,9 +44,15 @@ const shouldReRoll = (credits: number): boolean => {
 // Start session endpoint - creates new session with initial credits
 // returns the session id and credits to the client
 app.post('/start-session', async (req: Request, res: Response) => {
+  const { accountId } = req.body;
+
+  if (!accountId) {
+    return res.status(400).json({ error: 'AccountId is required' });
+  }
+
   try {
     const sessionId = uuidv4()
-    await Session.create({ sessionId, credits: initial_credits });
+    await Session.create({ sessionId, accountId, credits: initial_credits });
     res.json({ sessionId, initialCredits: initial_credits });
   } catch (error) {
     console.error(error);
@@ -91,6 +98,42 @@ app.post('/spin', async (req: Request, res: Response) => {
     return res.status(500).json({ error: `Server error - can't complete spin.` });
   }
 });
+
+
+// Cashout endpoint - moves credits from the session to the user account and delete the session
+// return session's cashout credits and total credits in account 
+app.post('/cashout', async (req: Request, res: Response) => {
+  const { sessionId } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const session = await Session.findOne({where: {sessionId}});
+
+    if(!session) {
+      return res.status(400).json({ error: 'SessionId not found' });
+    }
+
+    const accountId = session.accountId; 
+    await Account.findOrCreate({ where:{ accountId:accountId } });
+
+    //Execute session destruction and account update as a single transaction to ensure atomicity 
+    await Session.destroy({ where: { sessionId } , transaction});
+    await Account.update({ credits: sequelize.literal(`credits + ${session.credits}`) }, { where: { accountId } , transaction});
+    await transaction.commit();
+
+    const account = await Account.findOne({ where: { accountId } })
+    res.json({ cashoutCredits: session.credits, accountCredits: account?.credits });
+  } catch (error) {
+    await transaction.rollback();
+    return res.status(500).json({ error: `Can't complete cashout` });
+  }
+});
+
 
 const startServer = async () => {
   try {

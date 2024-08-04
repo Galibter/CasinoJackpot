@@ -1,28 +1,23 @@
 import { Model, DataTypes, Optional } from 'sequelize';
 import sequelize from '../sequelizeConfig';
 
-interface SessionAttributes {
-  sessionId: string;
+interface AccountAttributes {
   accountId: string;
   credits: number;
 }
 
-class Session extends Model<SessionAttributes>
-  implements SessionAttributes {
-  public sessionId!: string;
+class Account extends Model<AccountAttributes>
+  implements AccountAttributes {
   public accountId!: string;
   public credits!: number;
 }
 
-Session.init({
-  sessionId: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    primaryKey: true,
-  },
+Account.init({
   accountId: {
     type: DataTypes.STRING,
     allowNull: false,
+    unique: true,
+    primaryKey: true,
   },
   credits: {
     type: DataTypes.INTEGER,
@@ -31,7 +26,7 @@ Session.init({
   },
 }, {
   sequelize,
-  tableName: 'sessions',
+  tableName: 'accounts',
 });
 
-export default Session;
+export default Account;

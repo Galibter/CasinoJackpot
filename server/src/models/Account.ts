@@ -1,15 +1,10 @@
 import { Model, DataTypes, Optional } from 'sequelize';
 import sequelize from '../sequelizeConfig';
 
-interface AccountAttributes {
-  accountId: string;
-  credits: number;
-}
-
-class Account extends Model<AccountAttributes>
-  implements AccountAttributes {
+class Account extends Model {
   public accountId!: string;
   public credits!: number;
+  public updatedAt!: Date; 
 }
 
 Account.init({
@@ -27,6 +22,7 @@ Account.init({
 }, {
   sequelize,
   tableName: 'accounts',
+  timestamps: true 
 });
 
 export default Account;

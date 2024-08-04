@@ -4,6 +4,7 @@ import sequelize from './sequelizeConfig';
 import { v4 as uuidv4 } from 'uuid';
 import Session from './models/Session';
 import Account from './models/Account';
+import { createDeleteStaleSessionsEvent } from './sequelizeEvents';
 
 const app = express();
 const port = 3001; 
@@ -21,6 +22,11 @@ sequelize.authenticate().then(() => {
   console.log('Connection to DB has been established successfully.');
 }).catch((error) => {
   console.error('Unable to connect to the DB: ', error);
+});
+
+// Create DB Event - delete stale session event over db  
+createDeleteStaleSessionsEvent().then(() => {
+  console.log('DB Event setup completed.');
 });
 
 const signs = ['C', 'L', 'O', 'W'] as const;
@@ -41,7 +47,7 @@ const shouldReRoll = (credits: number): boolean => {
   return false;
 };
 
-// Start session endpoint - creates new session with initial credits
+// Start session endpoint - creates new session related to the user account with initial credits
 // returns the session id and credits to the client
 app.post('/start-session', async (req: Request, res: Response) => {
   const { accountId } = req.body;
@@ -60,7 +66,7 @@ app.post('/start-session', async (req: Request, res: Response) => {
   }
 });
 
-// Spin endpoint - rolling 3 random signs according the roll policy 
+// Spin endpoint - rolling 3 random signs according to the roll policy 
 // returns the result and session's credits to the client
 app.post('/spin', async (req: Request, res: Response) => {
   const { sessionId } = req.body;
@@ -78,6 +84,7 @@ app.post('/spin', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'SessionId not found' });
     }
 
+    const lastUpdate = session.updatedAt;
     let result = [getRandomSign(), getRandomSign(), getRandomSign()];
 
     // Reroll validation according rolling policy
@@ -88,9 +95,19 @@ app.post('/spin', async (req: Request, res: Response) => {
     const allMatch = result.every(sign => sign === result[0]);
     const reward = allMatch ? rewards[result[0]] : -1;
 
-    await Session.update({ credits: sequelize.literal(`credits + ${reward}`) }, { where: { sessionId } });
+    const [affectedSession] = await Session.update(
+      { credits: sequelize.literal(`credits + ${reward}`) }, 
+      { where: {
+          sessionId,
+          updatedAt: lastUpdate
+        }
+      });
+
+    if (!affectedSession) {
+      return res.status(400).json({ error: `Can't complete spin - another action occurred during spin` });
+    }
+
     const updatedSession = await Session.findOne({ where: { sessionId } });
-    
     res.json({ result, credits: updatedSession?.credits });
 
   } catch (error) {
@@ -119,11 +136,22 @@ app.post('/cashout', async (req: Request, res: Response) => {
     }
 
     const accountId = session.accountId; 
-    await Account.findOrCreate({ where:{ accountId:accountId } });
+    const [sessionAccount] = await Account.findOrCreate({ where:{ accountId:accountId } });
+    const lastUpdate = sessionAccount.updatedAt;
 
     //Execute session destruction and account update as a single transaction to ensure atomicity 
+    const [affectedAccount] = await Account.update(
+      { credits: sequelize.literal(`credits + ${session.credits}`) }, 
+      { where: { 
+        accountId,  
+        updatedAt: lastUpdate
+      } , transaction});
+
+      if (!affectedAccount) {
+        return res.status(400).json({ error: `Can't complete cashout - another action occurred during cashout` });
+      }
+    
     await Session.destroy({ where: { sessionId } , transaction});
-    await Account.update({ credits: sequelize.literal(`credits + ${session.credits}`) }, { where: { accountId } , transaction});
     await transaction.commit();
 
     const account = await Account.findOne({ where: { accountId } })

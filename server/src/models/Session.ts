@@ -1,17 +1,11 @@
 import { Model, DataTypes, Optional } from 'sequelize';
 import sequelize from '../sequelizeConfig';
 
-interface SessionAttributes {
-  sessionId: string;
-  accountId: string;
-  credits: number;
-}
-
-class Session extends Model<SessionAttributes>
-  implements SessionAttributes {
+class Session extends Model {
   public sessionId!: string;
   public accountId!: string;
   public credits!: number;
+  public updatedAt!: Date; 
 }
 
 Session.init({
@@ -32,6 +26,7 @@ Session.init({
 }, {
   sequelize,
   tableName: 'sessions',
+  timestamps: true 
 });
 
 export default Session;
